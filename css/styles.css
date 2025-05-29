@@ -1,0 +1,143 @@
+:root {
+    --primary: #0a1128;
+    --secondary: #001f54;
+    --accent: #034078;
+    --highlight: #1282a2;
+    --light: #fefcfb;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Orbitron', sans-serif;
+    background-color: var(--primary);
+    color: var(--light);
+    line-height: 1.6;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+}
+
+.r2d2 {
+    text-align: center;
+    font-size: 3rem;
+    margin: 20px 0;
+}
+
+h1 {
+    color: var(--highlight);
+    text-align: center;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px rgba(18, 130, 162, 0.5);
+}
+
+.translator-box {
+    background-color: var(--secondary);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid var(--accent);
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--light);
+    font-family: monospace;
+    font-size: 16px;
+    resize: vertical;
+    margin-bottom: 15px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+button {
+    background-color: var(--accent);
+    color: var(--light);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    transition: all 0.3s;
+    flex: 1;
+    min-width: 120px;
+}
+
+button:hover {
+    background-color: var(--highlight);
+    transform: translateY(-2px);
+}
+
+button.active {
+    background-color: var(--highlight);
+    box-shadow: 0 0 10px rgba(18, 130, 162, 0.5);
+}
+
+.result-container {
+    margin-top: 20px;
+    position: relative;
+}
+
+.copy-btn {
+    margin-top: 10px;
+    width: 100%;
+}
+
+.instructions {
+    margin-top: 30px;
+    background-color: var(--secondary);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.cheatsheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.cheatsheet div {
+    background-color: var(--accent);
+    padding: 8px;
+    border-radius: 5px;
+    text-align: center;
+    font-family: monospace;
+}
+
+footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--highlight);
+}
+
+@media (max-width: 600px) {
+    .controls {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+    }
+}
