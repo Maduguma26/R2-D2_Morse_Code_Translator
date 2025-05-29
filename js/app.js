@@ -103,7 +103,7 @@ async function playMorseSequence(morse) {
                 await sleep(100);
                 break;
             case '-': // Dash using longer dot sound
-                await playDot(900);
+                await playDot(15000);
                 await sleep(100);
                 break;
             case ' ':
