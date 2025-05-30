@@ -64,4 +64,8 @@ function generateCheatsheet() {
     return html;
 }
 
-export { encodeToMorse, decodeFromMorse, generateCheatsheet };
+window.morseCodeFunctions = {
+    encodeToMorse,
+    decodeFromMorse,
+    generateCheatsheet
+};

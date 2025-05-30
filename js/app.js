@@ -1,4 +1,5 @@
-import { encodeToMorse, decodeFromMorse, generateCheatsheet } from './morse-code.js';
+// Use window object instead of import
+const { encodeToMorse, decodeFromMorse, generateCheatsheet } = window.morseCodeFunctions;
 
 // DOM Elements
 const encodeBtn = document.getElementById('encodeBtn');
@@ -10,161 +11,164 @@ const input = document.getElementById('input');
 const output = document.getElementById('output');
 const cheatsheet = document.querySelector('.cheatsheet');
 
+// Application state
 let currentMode = 'encode';
+let isPlaying = false;
+let playTimeout = null;
+let activeSound = null;
 
-// Initialize cheatsheet
-cheatsheet.innerHTML = generateCheatsheet();
+// Audio element
+const dotSound = new Audio('./sounds/dot.mp3');
 
-// Set active button
+// Initialize the application
+function init() {
+    cheatsheet.innerHTML = generateCheatsheet();
+    dotSound.load(); // Preload sound
+    setActiveButton(encodeBtn);
+    setupEventListeners();
+}
+
 function setActiveButton(activeBtn) {
     encodeBtn.classList.remove('active');
     decodeBtn.classList.remove('active');
     activeBtn.classList.add('active');
 }
 
-// Translate function
-function translate() {
-    const text = input.value.trim();
-    if (!text) {
-        output.value = '';
-        return;
-    }
+function setupEventListeners() {
+    encodeBtn.addEventListener('click', handleEncode);
+    decodeBtn.addEventListener('click', handleDecode);
+    playBtn.addEventListener('click', togglePlayback);
+    clearBtn.addEventListener('click', handleClear);
+    copyBtn.addEventListener('click', handleCopy);
 
-    try {
-        output.value = currentMode === 'encode'
-            ? encodeToMorse(text)
-            : decodeFromMorse(text);
-    } catch (error) {
-        output.value = `Error: ${error.message}`;
-        console.error(error);
-    }
+    // Removed automatic translation on input
+    // input.addEventListener('input', debounce(handleInput, 300));
 }
 
-// Audio functions
-let audioContext;
-const beepDuration = 0.1;
-
-function initAudio() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-}
-
-function playBeep(frequency, duration, startTime) {
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.type = 'sine';
-    oscillator.frequency.value = frequency;
-    oscillator.connect(gainNode);
-
-    gainNode.connect(audioContext.destination);
-    gainNode.gain.setValueAtTime(0.5, startTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration);
-}
-
-async function playMorse() {
-    initAudio();
-
-    // Resume audio context if suspended
-    if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-    }
-
-    const morse = currentMode === 'encode' ? output.value : input.value;
-    if (!morse) return;
-
-    const dotLength = beepDuration;
-    const dashLength = dotLength * 3;
-    const spaceLength = dotLength;
-    const slashLength = dotLength * 7;
-
-    let time = audioContext.currentTime;
-
-    // Stop any ongoing playback
-    if (audioContext.state !== 'closed') {
-        await audioContext.close();
-    }
-    initAudio();
-
-    playBtn.disabled = true;
-    playBtn.textContent = 'Playing...';
-
-    try {
-        for (const char of morse) {
-            switch (char) {
-                case '.':
-                    playBeep(800, dotLength, time);
-                    time += dotLength;
-                    break;
-                case '-':
-                    playBeep(600, dashLength, time);
-                    time += dashLength;
-                    break;
-                case ' ':
-                    time += spaceLength;
-                    break;
-                case '/':
-                    time += slashLength;
-                    break;
-            }
-
-            if (char !== '/' && char !== ' ') {
-                time += dotLength;
-            }
-        }
-
-        // Wait for playback to complete
-        await new Promise(resolve => {
-            setTimeout(resolve, (time - audioContext.currentTime) * 1000);
-        });
-    } catch (error) {
-        console.error('Playback error:', error);
-        output.value = `Audio error: ${error.message}`;
-    } finally {
-        playBtn.disabled = false;
-        playBtn.textContent = 'Play Sound';
-    }
-}
-
-// Event Listeners
-encodeBtn.addEventListener('click', () => {
+// Translation functions - now only on button click
+function handleEncode() {
     currentMode = 'encode';
     setActiveButton(encodeBtn);
     translate();
-});
+}
 
-decodeBtn.addEventListener('click', () => {
+function handleDecode() {
     currentMode = 'decode';
     setActiveButton(decodeBtn);
     translate();
-});
+}
 
-playBtn.addEventListener('click', playMorse);
+function translate() {
+    const text = input.value.trim();
+    output.value = text ?
+        (currentMode === 'encode' ? encodeToMorse(text) : decodeFromMorse(text))
+        : '';
+}
 
-clearBtn.addEventListener('click', () => {
+// Playback control functions
+function togglePlayback() {
+    if (isPlaying) {
+        stopPlayback();
+    } else {
+        startPlayback();
+    }
+}
+
+function startPlayback() {
+    const morse = currentMode === 'encode' ? output.value : input.value;
+    if (!morse.trim()) return;
+
+    isPlaying = true;
+    playBtn.textContent = 'Stop';
+    playMorseSequence(morse);
+}
+
+function stopPlayback() {
+    isPlaying = false;
+    clearTimeout(playTimeout);
+    if (activeSound) {
+        activeSound.pause();
+        activeSound.currentTime = 0;
+        activeSound = null;
+    }
+    playBtn.textContent = 'Play Sound';
+}
+
+async function playMorseSequence(morse) {
+    for (let i = 0; i < morse.length && isPlaying; i++) {
+        const char = morse[i];
+        switch (char) {
+            case '.':
+                await playDot();
+                await sleep(100);
+                break;
+            case '-': // Dash using longer dot sound
+                await playDot(15000);
+                await sleep(100);
+                break;
+            case ' ':
+                await sleep(300);
+                break;
+            case '/':
+                await sleep(700);
+                break;
+        }
+    }
+    stopPlayback();
+}
+
+function playDot(duration = 100) {
+    return new Promise((resolve) => {
+        // Ensure we can play sound (some browsers require user interaction first)
+        document.body.addEventListener('click', enableAudio, { once: true });
+
+        activeSound = dotSound.cloneNode();
+        activeSound.play().catch(e => {
+            console.error("Audio play failed:", e);
+            resolve();
+        });
+
+        activeSound.onended = resolve;
+
+        // Stop after specified duration
+        playTimeout = setTimeout(() => {
+            activeSound.pause();
+            activeSound.currentTime = 0;
+            activeSound = null;
+            resolve();
+        }, duration);
+    });
+}
+
+function enableAudio() {
+    // This function is called on first user interaction
+    // to handle browser autoplay policies
+    dotSound.play().then(() => {
+        dotSound.pause();
+        dotSound.currentTime = 0;
+    });
+}
+
+// Utility functions
+function sleep(ms) {
+    return new Promise(resolve => {
+        playTimeout = setTimeout(resolve, ms);
+    });
+}
+
+function handleClear() {
     input.value = '';
     output.value = '';
-});
+}
 
-copyBtn.addEventListener('click', () => {
+function handleCopy() {
     output.select();
     document.execCommand('copy');
     copyBtn.textContent = 'Copied!';
     setTimeout(() => {
         copyBtn.textContent = 'Copy to Clipboard';
     }, 2000);
-});
-
-input.addEventListener('input', () => {
-    if (this.debounceTimer) {
-        clearTimeout(this.debounceTimer);
-    }
-    this.debounceTimer = setTimeout(translate, 500);
-});
+}
 
 // Initialize
-setActiveButton(encodeBtn);
+document.addEventListener('DOMContentLoaded', init);
