@@ -1,5 +1,9 @@
-# <i class="fas fa-robot"></i> R2-D2 Morse Code Translator <i class="fas fa-satellite-dish"></i>
+<i class="fas fa-robot"></i> R2-D2 Morse Code Translator <i class="fas fa-satellite-dish"></i>
 
+![Screenshot (79a)](https://github.com/user-attachments/assets/4f3659a4-2883-46b4-a06d-af301f3297f2)
+
+
+## 
 <div align="center">
   <img src="https://img.shields.io/badge/JavaScript-ES6+-yellow?logo=javascript" alt="JavaScript">
   <img src="https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white" alt="HTML5">
