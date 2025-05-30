@@ -29,5 +29,5 @@
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/r2d2-morse-translator.git
-   cd r2d2-morse-translator
+   git clone https://github.com/Maduguma26/r2d2-morse-translator.git
+  
