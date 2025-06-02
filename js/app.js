@@ -1,4 +1,4 @@
-// Use window object instead of import
+
 const { encodeToMorse, decodeFromMorse, generateCheatsheet } = window.morseCodeFunctions;
 
 // DOM Elements
@@ -14,146 +14,149 @@ const cheatsheet = document.querySelector('.cheatsheet');
 // Application state
 let currentMode = 'encode';
 let isPlaying = false;
-let playTimeout = null;
-let activeSound = null;
 
-// Audio element
-const dotSound = new Audio('./sounds/dot.mp3');
+// Audio elements
+const audioElements = {
+    dot: new Audio('./sounds/dot.mp3'),
+    dash: new Audio('./sounds/dash.mp3'),
+    finish: new Audio('./sounds/finish.mp3') // Added finish sound
+};
 
 // Initialize the application
 function init() {
+    // Set up cheatsheet
     cheatsheet.innerHTML = generateCheatsheet();
-    dotSound.load(); // Preload sound
+
+    // Preload audio files
+    audioElements.dot.load();
+    audioElements.dash.load();
+    audioElements.finish.load(); // Preload finish sound
+
+    // Set initial active button
     setActiveButton(encodeBtn);
+
+    // Event listeners
     setupEventListeners();
 }
 
+// Set active button style
 function setActiveButton(activeBtn) {
     encodeBtn.classList.remove('active');
     decodeBtn.classList.remove('active');
     activeBtn.classList.add('active');
 }
 
+// Setup all event listeners
 function setupEventListeners() {
     encodeBtn.addEventListener('click', handleEncode);
     decodeBtn.addEventListener('click', handleDecode);
-    playBtn.addEventListener('click', togglePlayback);
+    playBtn.addEventListener('click', handlePlay);
     clearBtn.addEventListener('click', handleClear);
     copyBtn.addEventListener('click', handleCopy);
-
-    // Removed automatic translation on input
-    // input.addEventListener('input', debounce(handleInput, 300));
+    // Removed the input event listener for automatic translation
 }
 
-// Translation functions - now only on button click
+// Translation functions
 function handleEncode() {
     currentMode = 'encode';
     setActiveButton(encodeBtn);
-    translate();
+    translate(); // Always translate when clicked
 }
 
 function handleDecode() {
     currentMode = 'decode';
     setActiveButton(decodeBtn);
-    translate();
+    translate(); // Always translate when clicked
 }
 
 function translate() {
     const text = input.value.trim();
-    output.value = text ?
-        (currentMode === 'encode' ? encodeToMorse(text) : decodeFromMorse(text))
-        : '';
-}
+    if (!text) {
+        output.value = '';
+        return;
+    }
 
-// Playback control functions
-function togglePlayback() {
-    if (isPlaying) {
-        stopPlayback();
-    } else {
-        startPlayback();
+    try {
+        output.value = currentMode === 'encode'
+            ? encodeToMorse(text)
+            : decodeFromMorse(text);
+    } catch (error) {
+        console.error('Translation error:', error);
+        output.value = `Error: ${error.message}`;
     }
 }
 
-function startPlayback() {
+// Sound playback functions
+async function handlePlay() {
+    if (isPlaying) return;
+
     const morse = currentMode === 'encode' ? output.value : input.value;
     if (!morse.trim()) return;
 
     isPlaying = true;
-    playBtn.textContent = 'Stop';
-    playMorseSequence(morse);
-}
+    playBtn.disabled = true;
+    playBtn.textContent = 'Playing...';
 
-function stopPlayback() {
-    isPlaying = false;
-    clearTimeout(playTimeout);
-    if (activeSound) {
-        activeSound.pause();
-        activeSound.currentTime = 0;
-        activeSound = null;
+    try {
+        await playMorseSequence(morse);
+    } catch (error) {
+        console.error('Playback error:', error);
+        output.value = `Audio error: ${error.message}`;
+    } finally {
+        isPlaying = false;
+        playBtn.disabled = false;
+        playBtn.textContent = 'Play Sound';
     }
-    playBtn.textContent = 'Play Sound';
 }
 
 async function playMorseSequence(morse) {
-    for (let i = 0; i < morse.length && isPlaying; i++) {
-        const char = morse[i];
-        switch (char) {
-            case '.':
-                await playDot();
-                await sleep(100);
-                break;
-            case '-': // Dash using longer dot sound
-                await playDot(15000);
-                await sleep(100);
-                break;
-            case ' ':
-                await sleep(300);
-                break;
-            case '/':
-                await sleep(700);
-                break;
+    try {
+        for (const char of morse) {
+            if (!isPlaying) break;
+
+            switch (char) {
+                case '.':
+                    await playSound('dot');
+                    await sleep(100);
+                    break;
+                case '-':
+                    await playSound('dash');
+                    await sleep(100);
+                    break;
+                case ' ':
+                    await sleep(300);
+                    break;
+                case '/':
+                    await sleep(700);
+                    break;
+            }
         }
+
+        // Play finish sound when done
+        if (isPlaying) {
+            await playSound('finish');
+        }
+    } catch (error) {
+        console.error('Playback error:', error);
+        throw error;
     }
-    stopPlayback();
 }
 
-function playDot(duration = 100) {
+function playSound(type) {
     return new Promise((resolve) => {
-        // Ensure we can play sound (some browsers require user interaction first)
-        document.body.addEventListener('click', enableAudio, { once: true });
-
-        activeSound = dotSound.cloneNode();
-        activeSound.play().catch(e => {
-            console.error("Audio play failed:", e);
+        const sound = audioElements[type].cloneNode();
+        sound.play().then(() => {
+            sound.onended = resolve;
+        }).catch(error => {
+            console.error(`Failed to play ${type} sound:`, error);
             resolve();
         });
-
-        activeSound.onended = resolve;
-
-        // Stop after specified duration
-        playTimeout = setTimeout(() => {
-            activeSound.pause();
-            activeSound.currentTime = 0;
-            activeSound = null;
-            resolve();
-        }, duration);
-    });
-}
-
-function enableAudio() {
-    // This function is called on first user interaction
-    // to handle browser autoplay policies
-    dotSound.play().then(() => {
-        dotSound.pause();
-        dotSound.currentTime = 0;
     });
 }
 
 // Utility functions
 function sleep(ms) {
-    return new Promise(resolve => {
-        playTimeout = setTimeout(resolve, ms);
-    });
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function handleClear() {
@@ -170,5 +173,5 @@ function handleCopy() {
     }, 2000);
 }
 
-// Initialize
+// Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
